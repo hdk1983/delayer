@@ -48,7 +48,8 @@ $ sqlite3 in.delayer.db
 SQLite version 3.40.1 2022-12-28 14:03:47
 Enter ".help" for usage hints.
 sqlite> PRAGMA journal_mode=TRUNCATE;
-sqlite> CREATE TABLE hosts(host TEXT PRIMARY KEY,sleep INTEGER);               sqlite> CREATE INDEX host_idx ON hosts(host);
+sqlite> CREATE TABLE hosts(host TEXT PRIMARY KEY,sleep INTEGER);
+sqlite> CREATE INDEX host_idx ON hosts(host);
 sqlite> .quit
 ```
 
