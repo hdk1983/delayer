@@ -130,8 +130,8 @@ get_hostname (int fd, size_t buflen, char buf[buflen])
 }
 
 static int
-db_access (char *host, char *db_name, int db_uid, int db_gid,
-	   enum db_mode mode)
+db_access2 (char *host, char *db_name, int db_uid, int db_gid,
+	    enum db_mode mode, char *max_banner)
 {
   if (setgid (db_gid) < 0 || setuid (db_uid) < 0)
     {
@@ -206,20 +206,48 @@ db_access (char *host, char *db_name, int db_uid, int db_gid,
       break;
     }
   sqlite3_close (db);
-  if (sleep_time > 0)
+  if (sleep_time > MAX_SLEEP_TIME_VAL)
+    sleep_time = MAX_SLEEP_TIME_VAL;
+  if (sleep_time == MAX_SLEEP_TIME_VAL && max_banner && max_banner[0])
     {
-      if (sleep_time > MAX_SLEEP_TIME_VAL)
-	sleep_time = MAX_SLEEP_TIME_VAL;
-      sleep (sleep_time);
+      FILE *fp = fopen (max_banner, "r");
+      if (fp)
+	{
+	  for (;;)
+	    {
+	      char buf[64];
+	      size_t n = fread (buf, 1, sizeof buf, fp);
+	      if (!n)
+		break;
+	      if (sleep_time >= 2)
+		{
+		  sleep_time -= 2;
+		  sleep (2);
+		}
+	      if (write (1, buf, n) < n)
+		break;
+	    }
+	  fclose (fp);
+	}
     }
+  if (sleep_time > 0)
+    sleep (sleep_time);
   return 0;
+}
+
+static int
+db_access (char *host, char *db_name, int db_uid, int db_gid,
+	   enum db_mode mode)
+{
+  return db_access2 (host, db_name, db_uid, db_gid, mode, NULL);
 }
 
 int
 main (int argc, char **argv)
 {
-  if (argc < 5)
-    myerrx (1, "usage: %s database uid gid program parameters", argv[0]);
+  if (argc < 6)
+    myerrx (1, "usage: %s database uid gid max-banner program parameters",
+	    argv[0]);
   int db_uid = atoi (argv[2]);
   int db_gid = atoi (argv[3]);
   char host[512];
@@ -230,7 +258,7 @@ main (int argc, char **argv)
   if (pid < 0)
     myerr (1, "fork");
   if (!pid)
-    return db_access (host, argv[1], db_uid, db_gid, DB_SLEEP);
+    return db_access2 (host, argv[1], db_uid, db_gid, DB_SLEEP, argv[4]);
   int wstatus;
   if (waitpid (pid, &wstatus, 0) < 0)
     myerr (1, "wait");
@@ -252,7 +280,7 @@ main (int argc, char **argv)
   if (!pid)
     {
       extern char **environ;
-      execve (argv[4], &argv[4], environ);
+      execve (argv[5], &argv[5], environ);
       myerr (1, "execve");
     }
   struct timespec t1;

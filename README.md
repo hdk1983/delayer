@@ -33,6 +33,9 @@ with root user.
 This program is not a proxy to make it simple and get good throughput.
 The server communicates directly with the TCP socket.
 
+When the sleep time is 60, "max-banner" file specified in fourth
+parameter will be sent to the client.  The file is optional.
+
 ## Build ##
 
 Use a C compiler with SQLite3 library:
@@ -67,6 +70,12 @@ Copy the database file to somewhere (only if the file does not exist):
 # test -e /srv/local/in.delayer.db || install -o nobody -g nogroup in.delayer.db* /srv/local/in.delayer.db
 ```
 
+Create the max-banner file if needed:
+
+```
+# echo message-for-client > /srv/local/in.delayer.max-banner
+```
+
 Change a port number of OpenSSH server (or disable the server):
 
 ```
@@ -84,7 +93,7 @@ Add inetd configuration:
 inetd configuration example:
 
 ```
-ssh stream tcp nowait root:root /usr/local/sbin/in.delayer in.delayer /srv/local/in.delayer.db 65534 65534 /usr/sbin/sshd -i
+ssh stream tcp nowait root:root /usr/local/sbin/in.delayer in.delayer /srv/local/in.delayer.db /srv/local/in.delayer.max-banner 65534 65534 /usr/sbin/sshd -i
 ```
 
 ## Monitor ##
